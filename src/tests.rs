@@ -313,3 +313,19 @@ fn different_families_same_range() {
     assert_ne!(sexy, cousin, "Sexy and Cousin primes should be different");
     assert_ne!(cousin, twins, "Cousin and Twin primes should be different");
 }
+
+/*──────────── Additional Test Modules ────────────*/
+
+// Include the additional test modules
+#[path = "error_handling_tests.rs"]
+mod error_handling_tests;
+
+#[path = "gui_tests.rs"]
+mod gui_tests;
+
+#[path = "util_tests.rs"]
+mod util_tests;
+
+// Include performance test module
+#[path = "performance_tests.rs"]
+mod performance_tests;
