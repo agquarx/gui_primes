@@ -1,0 +1,14 @@
+[package]
+name = "gui_primes"
+version = "0.1.0"
+edition = "2021"
+
+[features]
+clipboard = ["arboard"]          # enable with --features clipboard
+
+[dependencies]
+eframe    = "0.25"
+egui      = "0.25"
+futures   = "0.3"
+once_cell = "1.19"
+arboard   = { version = "3", optional = true }
