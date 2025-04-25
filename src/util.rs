@@ -3,7 +3,7 @@
 #[cfg(feature = "clipboard")]
 use arboard::Clipboard;
 
-use crate::primes::PrimeError;
+use crate::primes_error::PrimeError;
 
 #[cfg(feature = "clipboard")]
 pub fn copy_to_clipboard(text: &str) -> Result<(), PrimeError> {

@@ -21,9 +21,15 @@ mod util_tests {
     fn test_clipboard_function() {
         // This test only runs when the clipboard feature is disabled
         use crate::util::copy_to_clipboard;
+        use crate::primes_error::PrimeError;
         
         let result = copy_to_clipboard("Test data");
         assert!(result.is_err(), "Result should be an error when clipboard feature is disabled");
+        
+        match result {
+            Err(PrimeError::Fatal(_)) => (),
+            _ => panic!("Expected PrimeError::Fatal"),
+        }
     }
 }
 
@@ -31,7 +37,6 @@ mod util_tests {
 #[cfg(test)]
 mod prime_util_tests {
     use crate::primes::{PrimeType, compute_with_memo};
-    use crate::tests::run_once;
     
     // Test that prime calculations consistently handle edge cases
     #[test]
