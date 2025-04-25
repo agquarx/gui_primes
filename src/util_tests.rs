@@ -9,9 +9,8 @@ mod util_tests {
     #[test]
     fn test_clipboard_function() {
         // This test only runs when the clipboard feature is enabled
-        use crate::util::copy_to_clipboard;
-        
-        let result = copy_to_clipboard("Test data");
+        // When inside a module in tests.rs, we access the parent module
+        let result = super::super::util::copy_to_clipboard("Test data");
         // Result may succeed or fail depending on the system environment
         println!("Clipboard feature enabled, result: {:?}", result);
     }
@@ -20,14 +19,12 @@ mod util_tests {
     #[test]
     fn test_clipboard_function() {
         // This test only runs when the clipboard feature is disabled
-        use crate::util::copy_to_clipboard;
-        use crate::primes_error::PrimeError;
-        
-        let result = copy_to_clipboard("Test data");
+        // When inside a module in tests.rs, we access the parent module
+        let result = super::super::util::copy_to_clipboard("Test data");
         assert!(result.is_err(), "Result should be an error when clipboard feature is disabled");
         
         match result {
-            Err(PrimeError::Fatal(_)) => (),
+            Err(super::super::primes_error::PrimeError::Fatal(_)) => (),
             _ => panic!("Expected PrimeError::Fatal"),
         }
     }
