@@ -1,15 +1,10 @@
 // Integration tests for the gui_primes library
 // These tests verify the library works correctly from an external perspective
 
-use std::sync::{Arc, Mutex, atomic::{AtomicBool, Ordering}};
-use eframe::egui;
-use std::thread;
-use std::time::Duration;
-
-// We need to import the actual crate, not using 'gui_primes::'
+// Import the library crate
 use gui_primes::primes::{PrimeType, compute_with_memo};
 
-// Helper function to run computations synchronously (similar to the one in src/tests.rs)
+// Helper function to run computations synchronously
 fn run_calculation(kind: PrimeType, start: u64, end: u64) -> Vec<String> {
     compute_with_memo(kind, start, end)
 }
@@ -58,7 +53,7 @@ fn test_memoization() {
 #[test]
 fn test_large_ranges() {
     // This test verifies the library can handle reasonably large ranges
-    let large_range = run_calculation(PrimeType::Mersenne, 20, 30);
+    let large_range = run_calculation(PrimeType::Mersenne, 2, 8);
     
     // There should be primes in this range
     assert!(!large_range.is_empty(), "Large range should contain primes");

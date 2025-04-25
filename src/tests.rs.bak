@@ -290,7 +290,7 @@ fn inverted_large_range_test() {
 #[test]
 fn very_large_start_value_test() {
     // Test with a very large start value to ensure no integer overflow issues
-    let (_result, progress) = run_once(PrimeType::Palindromic, 10_000_000, 10_000_010);
+    let (result, progress) = run_once(PrimeType::Palindromic, 10_000_000, 10_000_010);
     
     // We may or may not find primes in this range, but the calculation should complete
     assert_eq!(progress, 1.0, "Progress should complete for large start values");
@@ -314,3 +314,18 @@ fn different_families_same_range() {
     assert_ne!(cousin, twins, "Cousin and Twin primes should be different");
 }
 
+/*──────────── Additional Test Modules ────────────*/
+
+// Include the additional test modules
+#[path = "error_handling_tests.rs"]
+mod error_handling_tests;
+
+#[path = "gui_tests.rs"]
+mod gui_tests;
+
+#[path = "util_tests.rs"]
+mod util_tests;
+
+// Include performance test module
+#[path = "performance_tests.rs"]
+mod performance_tests;
