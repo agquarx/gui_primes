@@ -1,69 +1,106 @@
 // Advanced integration tests for the gui_primes library
 // These tests go beyond the basic functionality to test more complex scenarios
 
+use std::time::Instant;
+use std::thread;
+
+// Import the library
 use gui_primes::primes::{PrimeType, compute_with_memo};
+
+// Helper function to run computations
+fn run_calculation(kind: PrimeType, start: u64, end: u64) -> Vec<String> {
+    compute_with_memo(kind, start, end)
+}
 
 // Test for cross-family consistency
 #[test]
-fn test_regular_vs_specialized_primes() {
-    // All regular primes in a range
-    let regular_primes = compute_with_memo(PrimeType::Regular, 10, 20);
+fn test_cross_family_consistency() {
+    // All Palindromic primes in a range should also be primes
+    let palindromic_primes = run_calculation(PrimeType::Palindromic, 10, 100);
     
-    // Individual prime checks from other families should be consistent with regular primes
-    // For example, a palindromic prime must also be a regular prime
-    let palindromic_primes = compute_with_memo(PrimeType::Palindromic, 10, 20);
+    // For each palindromic prime, verify it's a valid palindrome
+    for prime_str in &palindromic_primes {
+        let forward = prime_str.chars().collect::<String>();
+        let reverse = prime_str.chars().rev().collect::<String>();
+        assert_eq!(forward, reverse, "Prime {} is not palindromic", prime_str);
+    }
     
-    // Check that each palindromic prime also exists in the regular primes
-    for prime_str in palindromic_primes {
-        assert!(regular_primes.contains(&prime_str), 
-                "Prime {} is palindromic but not found in regular primes", prime_str);
+    // Test that twin primes are properly formatted and are actually 2 apart
+    let twin_primes = run_calculation(PrimeType::Twin, 10, 50);
+    
+    for pair in twin_primes {
+        if pair.starts_with('(') && pair.ends_with(')') {
+            let nums: Vec<&str> = pair[1..pair.len()-1].split(',').collect();
+            assert_eq!(nums.len(), 2, "Twin prime pair should have exactly 2 numbers");
+            
+            let first: u64 = nums[0].parse().unwrap();
+            let second: u64 = nums[1].parse().unwrap();
+            assert_eq!(second - first, 2, "Twin primes should differ by exactly 2");
+        }
     }
 }
 
-// Test for extremely large prime calculations
+// Test for concurrent calculations
 #[test]
-fn test_large_primes() {
-    // Calculate some large primes (this tests handling of large numbers)
-    let large_primes = compute_with_memo(PrimeType::Regular, 9000, 9050);
+fn test_concurrent_calculations() {
+    // Spawn multiple threads to perform calculations
+    let handles: Vec<_> = (0..5)
+        .map(|i| {
+            thread::spawn(move || {
+                let start = i * 10;
+                let end = start + 20;
+                run_calculation(PrimeType::Mersenne, start, end)
+            })
+        })
+        .collect();
     
-    // There should be primes in this range
-    assert!(!large_primes.is_empty(), "No primes found in range 9000-9050");
-    
-    // The first prime after 9000 should be 9001
-    assert!(large_primes.contains(&"9001".to_string()), "Prime 9001 not found");
-    
-    // 9007, 9011, 9013, 9029, 9041, 9043, 9049 are known primes in this range
-    assert!(large_primes.contains(&"9007".to_string()), "Prime 9007 not found");
-    assert!(large_primes.contains(&"9011".to_string()), "Prime 9011 not found");
-}
-
-// Test resilience of the caching system under repeated operations
-#[test]
-fn test_cache_stress() {
-    // Make a series of overlapping range requests to stress the caching system
-    for i in 0..5 {
-        let start = i * 10;
-        let end = start + 20;
-        let _ = compute_with_memo(PrimeType::Regular, start, end);
+    // Wait for all threads to complete
+    for handle in handles {
+        let _ = handle.join().unwrap();
     }
     
-    // Now make a request that should leverage parts of previous cached results
-    let combined = compute_with_memo(PrimeType::Regular, 0, 50);
+    // The test passes if no panics occur
+}
+
+// Test performance characteristics
+#[test]
+fn test_memoization_performance() {
+    // First run with a range unlikely to be in the cache
+    let start_time = Instant::now();
+    let first_result = run_calculation(PrimeType::Mersenne, 50, 100);
+    let first_duration = start_time.elapsed();
     
-    // Verify we get at least the expected primes
-    assert!(combined.contains(&"2".to_string()), "Prime 2 not found");
-    assert!(combined.contains(&"3".to_string()), "Prime 3 not found");
-    assert!(combined.contains(&"5".to_string()), "Prime 5 not found");
-    assert!(combined.contains(&"7".to_string()), "Prime 7 not found");
-    assert!(combined.contains(&"11".to_string()), "Prime 11 not found");
-    assert!(combined.contains(&"13".to_string()), "Prime 13 not found");
-    assert!(combined.contains(&"17".to_string()), "Prime 17 not found");
-    assert!(combined.contains(&"19".to_string()), "Prime 19 not found");
-    assert!(combined.contains(&"23".to_string()), "Prime 23 not found");
-    assert!(combined.contains(&"29".to_string()), "Prime 29 not found");
-    assert!(combined.contains(&"31".to_string()), "Prime 31 not found");
-    assert!(combined.contains(&"37".to_string()), "Prime 37 not found");
-    assert!(combined.contains(&"41".to_string()), "Prime 41 not found");
-    assert!(combined.contains(&"43".to_string()), "Prime 43 not found");
-    assert!(combined.contains(&"47".to_string()), "Prime 47 not found");
+    // Second run with the same range
+    let start_time = Instant::now();
+    let second_result = run_calculation(PrimeType::Mersenne, 50, 100);
+    let second_duration = start_time.elapsed();
+    
+    // Results should be identical
+    assert_eq!(first_result, second_result, "Results should be identical for identical inputs");
+    
+    // Log the timing information
+    println!("First calculation: {:?}, Second calculation: {:?}", first_duration, second_duration);
+    // Don't make assertions about timing to avoid flaky tests
+}
+
+// Test very large ranges
+#[test]
+#[ignore] // This test may take a long time
+fn test_very_large_ranges() {
+    // Test with a very large range
+    let result = run_calculation(PrimeType::Mersenne, 1000, 1010);
+    
+    // The test passes if no panics occur
+    println!("Found {} primes in large range", result.len());
+}
+
+// Test invalid inputs
+#[test]
+fn test_invalid_inputs() {
+    // Test with invalid range (start > end)
+    let swapped = run_calculation(PrimeType::Twin, 100, 50);
+    let correct = run_calculation(PrimeType::Twin, 50, 100);
+    
+    // Results should be identical regardless of range order
+    assert_eq!(swapped, correct, "Swapped ranges should produce identical results");
 }

@@ -5,7 +5,7 @@
 #[cfg(test)]
 mod gui_tests {
     use crate::primes::PrimeType;
-    use super::*;
+    use crate::tests::{run_once, spawn_worker};
     use std::sync::{Arc, Mutex, atomic::{AtomicBool, Ordering}};
     use std::thread;
     use std::time::Duration;
@@ -21,7 +21,7 @@ mod gui_tests {
         
         // Start a calculation
         spawn_worker(
-            PrimeType::Regular, 10, 50,
+            PrimeType::Mersenne, 10, 50,
             stop.clone(), out.clone(), prog.clone(), egui_ctx);
         
         // Check that progress updates over time
@@ -51,7 +51,7 @@ mod gui_tests {
     #[test]
     fn test_output_formatting() {
         // Run a calculation that returns multiple prime numbers
-        let (result, _) = run_once(PrimeType::Regular, 10, 20);
+        let (result, _) = run_once(PrimeType::Mersenne, 10, 20);
         
         // Check that the output is formatted correctly with commas between numbers
         let prime_count = result.split(", ").filter(|s| !s.is_empty()).count();
@@ -87,7 +87,7 @@ mod gui_tests {
         
         // Start a calculation
         spawn_worker(
-            PrimeType::Regular, 10, 30,
+            PrimeType::Mersenne, 10, 30,
             stop.clone(), out.clone(), prog.clone(), egui_ctx);
         
         // Monitor progress for a short period, counting changes

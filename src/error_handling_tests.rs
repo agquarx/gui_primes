@@ -4,14 +4,14 @@
 /// Tests for edge case handling in prime calculations
 #[cfg(test)]
 mod error_tests {
-    use crate::primes::{PrimeType, compute_with_memo};
-    use super::*;
+    use crate::primes::{PrimeType};
+    use crate::tests::{run_once};
 
     /// Test that extremely large ranges don't cause crashes
     #[test]
     fn test_extremely_large_range() {
         // A range that's too large to process efficiently but shouldn't crash
-        let result = run_once(PrimeType::Regular, 1, u64::MAX / 2);
+        let result = run_once(PrimeType::Mersenne, 1, u64::MAX / 2);
         // We don't care about the actual results, just that it didn't crash
         // Progress should complete
         assert_eq!(result.1, 1.0, "Progress should complete");
@@ -21,11 +21,11 @@ mod error_tests {
     #[test]
     fn test_invalid_ranges() {
         // Test with zero as start
-        let (zero_start, _) = run_once(PrimeType::Regular, 0, 10);
+        let (zero_start, _) = run_once(PrimeType::Mersenne, 0, 10);
         assert!(!zero_start.contains("0"), "Zero should not be considered prime");
         
         // Test with one as start
-        let (one_start, _) = run_once(PrimeType::Regular, 1, 10);
+        let (one_start, _) = run_once(PrimeType::Mersenne, 1, 10);
         assert!(!one_start.contains("1"), "One should not be considered prime");
     }
 
@@ -41,7 +41,7 @@ mod error_tests {
             let handle = thread::spawn(move || {
                 let start = i * 10;
                 let end = start + 20;
-                run_once(PrimeType::Regular, start, end)
+                run_once(PrimeType::Mersenne, start, end)
             });
             handles.push(handle);
         }
@@ -58,8 +58,8 @@ mod error_tests {
 /// Tests for interoperability between prime families
 #[cfg(test)]
 mod interop_tests {
-    use crate::primes::{PrimeType, compute_with_memo};
-    use super::*;
+    use crate::primes::{PrimeType};
+    use crate::tests::{run_once};
 
     /// Test that prime numbers in one family are consistent with properties of that family
     #[test]
@@ -93,16 +93,16 @@ mod interop_tests {
     /// Test that every prime family includes only actual prime numbers
     #[test]
     fn test_all_families_contain_primes() {
-        // Get regular primes for reference
-        let (regular_primes_str, _) = run_once(PrimeType::Regular, 10, 50);
-        let regular_primes: Vec<u64> = regular_primes_str
+        // Get a reference list of palindromic primes (which are all primes)
+        let (ref_primes_str, _) = run_once(PrimeType::Palindromic, 10, 50);
+        let ref_primes: Vec<u64> = ref_primes_str
             .split(", ")
             .filter(|s| !s.is_empty())
             .map(|s| s.parse().unwrap())
             .collect();
         
-        // Helper function to check if a number is in the list of regular primes
-        let is_prime = |n: u64| regular_primes.contains(&n);
+        // Helper function to check if a number is in the list of reference primes
+        let is_prime = |n: u64| ref_primes.contains(&n);
         
         // Test various prime families to ensure all numbers they contain are prime
         let family_types = [
@@ -141,10 +141,11 @@ mod interop_tests {
 #[cfg(test)]
 mod stop_signal_tests {
     use crate::primes::{PrimeType};
-    use super::*;
-    use std::sync::{Arc, atomic::{AtomicBool, Ordering}};
+    use crate::tests::{spawn_worker};
+    use std::sync::{Arc, Mutex, atomic::{AtomicBool, Ordering}};
     use std::thread;
     use std::time::Duration;
+    use eframe::egui;
     
     /// Test that the stop signal is properly handled
     #[test]
@@ -156,7 +157,7 @@ mod stop_signal_tests {
         
         // Start a calculation with a large range that will take some time
         spawn_worker(
-            PrimeType::Regular, 1000, 10000,
+            PrimeType::Mersenne, 1000, 10000,
             stop.clone(), out.clone(), prog.clone(), egui_ctx);
         
         // Let it run for a short time
