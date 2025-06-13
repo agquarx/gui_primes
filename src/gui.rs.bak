@@ -1,3 +1,4 @@
+// src/gui.rs
 //! Functional-style GUI glue: pure compute + streaming + UI.
 
 use std::{
@@ -12,30 +13,17 @@ use std::{
 };
 
 use crate::primes::{cache_stats, compute_with_memo, PrimeType};
-use egui::ProgressBar;
-
-fn format_duration(total_seconds: f32) -> String {
-    let total = total_seconds as u64;
-    let hours = total / 3600;
-    let minutes = (total % 3600) / 60;
-    let seconds = total % 60;
-
-    if hours > 0 {
-        format!("{}:{:02}:{:02}", hours, minutes, seconds)
-    } else if minutes > 0 {
-        format!("{}:{:02}", minutes, seconds)
-    } else {
-        format!("{}", seconds)
-    }
-}
+use egui::{self, ProgressBar};
 
 pub struct MyApp {
     output: Arc<Mutex<String>>,
     prog: Arc<Mutex<f32>>,
     elapsed: Arc<Mutex<f32>>,
+
     calc_running: bool,
     started: Instant,
     should_stop: Arc<AtomicBool>,
+
     selected: PrimeType,
     range_start: u64,
     range_end: u64,
@@ -84,9 +72,7 @@ impl eframe::App for MyApp {
                         .desired_width(ui.available_width() * 0.75)
                         .show_percentage(),
                 );
-                ui.label(egui::RichText::new(format_duration(secs))
-                    .font(egui::FontId::proportional(48.0))
-                    .strong());
+                ui.label(format!("{secs:.1} s"));
             });
 
             ui.add_space(8.0);
@@ -96,7 +82,10 @@ impl eframe::App for MyApp {
             });
             ui.horizontal(|ui| {
                 ui.label("End:");
-                ui.add(egui::Slider::new(&mut self.range_end, (self.range_start + 1)..=10_000_000).text("n"));
+                ui.add(
+                    egui::Slider::new(&mut self.range_end, (self.range_start + 1)..=10_000_000)
+                        .text("n"),
+                );
             });
 
             ui.label("Prime family:");
@@ -104,12 +93,39 @@ impl eframe::App for MyApp {
             egui::ComboBox::from_label("family")
                 .selected_text(format!("{:?}", self.selected))
                 .show_ui(ui, |ui| {
-                    for &t in PrimeType::all() {
-                        if ui.selectable_label(self.selected == t, format!("{:?}", t)).clicked() {
-                            self.selected = t;
-                        }
+                for &t in &[
+                    PrimeType::Mersenne,
+                    PrimeType::SophieGermain,
+                    PrimeType::Twin,
+                    PrimeType::Palindromic,
+                    PrimeType::Sexy,
+                    PrimeType::Cousin,
+                    PrimeType::Emirp,
+                    PrimeType::Safe,
+                    PrimeType::Chen,
+                    PrimeType::Circular,
+                    PrimeType::Fermat,
+                    PrimeType::Cuban,
+                    PrimeType::Ebl,
+                    PrimeType::Proth,
+                    PrimeType::Cullen,
+                    PrimeType::Woodall,
+                    PrimeType::Thabit,
+                    PrimeType::Euclid,
+                    PrimeType::Fibonacci,
+                    PrimeType::Perrin,
+                    PrimeType::Happy,
+                    PrimeType::Wilson,
+                    PrimeType::CenteredHex,
+                ] {
+                    if ui
+                        .selectable_label(self.selected == t, format!("{t:?}"))
+                        .clicked()
+                    {
+                        self.selected = t;
                     }
-                });
+                }
+            });
 
             if self.selected != prev {
                 *self.output.lock().unwrap() = String::new();
@@ -135,9 +151,8 @@ impl eframe::App for MyApp {
                     let home = env::var("HOME").unwrap_or_default();
                     let path = Path::new(&home).join(".dump");
                     if let Ok(s) = fs::read_to_string(path) {
-                        if let Some(last) = s.split(',')
-                                              .filter_map(|x| x.trim().parse::<u64>().ok())
-                                              .last()
+                        if let Some(last) =
+                            s.split(',').filter_map(|x| x.trim().parse::<u64>().ok()).next_back()
                         {
                             self.range_start = last + 1;
                             self.range_end = self.range_start + self.last_span.max(1_000);
@@ -173,7 +188,7 @@ impl MyApp {
         *self.output.lock().unwrap() = String::new();
 
         let out = self.output.clone();
-        let prg = self.prog.clone();
+        let pr = self.prog.clone();
         let stop = self.should_stop.clone();
         let fam = self.selected;
         let a = self.range_start;
@@ -181,32 +196,51 @@ impl MyApp {
         let ctx2 = ctx.clone();
 
         thread::spawn(move || {
-            let primes = compute_with_memo(fam, a, b);
-            if primes.is_empty() {
-                *prg.lock().unwrap() = 1.0;
+            let v = compute_with_memo(fam, a, b);
+            
+            // If no primes found, just set progress to 1.0
+            if v.is_empty() {
+                *pr.lock().unwrap() = 1.0;
                 ctx2.request_repaint();
                 return;
             }
-            for (i, prime) in primes.iter().enumerate() {
+            
+            for (i, s) in v.iter().enumerate() {
                 if stop.load(Ordering::SeqCst) {
                     break;
                 }
+                
+                // Add the prime to the output
                 {
                     let mut o = out.lock().unwrap();
-                    if !o.is_empty() { o.push_str(", "); }
-                    o.push_str(prime);
+                    if !o.is_empty() {
+                        o.push_str(", ");
+                    }
+                    o.push_str(s);
                 }
-                let curr = (i as f32) / (primes.len() as f32);
-                let next = ((i + 1) as f32) / (primes.len() as f32);
-                for step in 0..=10 {
-                    let p = curr + (next - curr) * (step as f32 / 10.0);
-                    *prg.lock().unwrap() = p;
+                
+                // Create smoother progress updates between this prime and the next
+                let current_progress = (i as f32) / (v.len() as f32);
+                let next_progress = ((i + 1) as f32) / (v.len() as f32);
+                
+                // Number of intermediate steps (more steps = smoother progress)
+                let steps = 10;
+                
+                for step in 0..=steps {
+                    // Calculate intermediate progress between current and next
+                    let progress = current_progress + (next_progress - current_progress) * (step as f32 / steps as f32);
+                    *pr.lock().unwrap() = progress;
                     ctx2.request_repaint();
+                    
+                    // Much shorter sleep time for smoother updates
                     thread::sleep(Duration::from_millis(20));
-                    if stop.load(Ordering::SeqCst) { break; }
+                    
+                    if stop.load(Ordering::SeqCst) {
+                        break;
+                    }
                 }
             }
-            *prg.lock().unwrap() = 1.0;
+            *pr.lock().unwrap() = 1.0;
             ctx2.request_repaint();
         });
     }

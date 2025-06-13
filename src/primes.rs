@@ -2,10 +2,7 @@
 //! Pure, functional-style prime families engine with memoization.
 
 use once_cell::sync::Lazy;
-use std::{
-    collections::HashMap,
-    sync::Mutex,
-};
+use std::{collections::HashMap, sync::Mutex};
 
 pub type CacheKey = (PrimeType, u64, u64);
 static MEMO: Lazy<Mutex<HashMap<CacheKey, Vec<String>>>> = Lazy::new(|| Mutex::new(HashMap::new()));
@@ -35,6 +32,18 @@ pub enum PrimeType {
     Happy,
     Wilson,
     CenteredHex,
+}
+
+impl PrimeType {
+    pub fn all() -> &'static [PrimeType] {
+        use PrimeType::*;
+        &[
+            Mersenne, SophieGermain, Twin, Palindromic, Sexy, Cousin, Emirp, Safe,
+            Chen, Circular, Fermat, Cuban, Ebl,
+            Proth, Cullen, Woodall, Thabit, Euclid,
+            Fibonacci, Perrin, Happy, Wilson, CenteredHex,
+        ]
+    }
 }
 
 fn is_prime(n: u64) -> bool {
@@ -160,16 +169,16 @@ fn family_hit(ty: PrimeType, p: u64) -> Option<String> {
                 }
                 sum
             }
-            
+
             // Check if it's a happy number by tracking the sequence
             let mut seen = std::collections::HashSet::new();
             let mut current = p;
-            
+
             while current != 1 && !seen.contains(&current) {
                 seen.insert(current);
                 current = step(current);
             }
-            
+
             // If current == 1, it's a happy number
             (current == 1 && is_prime(p)).then(|| p.to_string())
         }
@@ -196,8 +205,12 @@ pub fn cache_stats() -> usize {
 
 pub fn compute_with_memo(ty: PrimeType, start: u64, end: u64) -> Vec<String> {
     // Ensure start <= end
-    let (start, end) = if start > end { (end, start) } else { (start, end) };
-    
+    let (start, end) = if start > end {
+        (end, start)
+    } else {
+        (start, end)
+    };
+
     let key = (ty, start, end);
     let mut cache = MEMO.lock().unwrap();
     cache

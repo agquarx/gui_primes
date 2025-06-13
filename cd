@@ -1,0 +1,14 @@
+error: unexpected argument '-1' found
+
+  tip: to pass '-1' as a value, use 'error: unexpected argument '-1' found
+
+  tip: to pass '-1' as a value, use '-- -1'
+
+Usage: cargo run [OPTIONS] [ARGS]...
+
+For more information, try '--help'.
+-- -1'
+
+Usage: cargo run [OPTIONS] [ARGS]...
+
+For more information, try '--help'.
